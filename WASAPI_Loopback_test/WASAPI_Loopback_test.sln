@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30503.244
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WASAPI_Loopback_test", "WASAPI_Loopback_test.vcxproj", "{DADC7109-6D73-4044-AA06-250938FC843D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DADC7109-6D73-4044-AA06-250938FC843D}.Debug|x64.ActiveCfg = Debug|x64
+		{DADC7109-6D73-4044-AA06-250938FC843D}.Debug|x64.Build.0 = Debug|x64
+		{DADC7109-6D73-4044-AA06-250938FC843D}.Debug|x86.ActiveCfg = Debug|Win32
+		{DADC7109-6D73-4044-AA06-250938FC843D}.Debug|x86.Build.0 = Debug|Win32
+		{DADC7109-6D73-4044-AA06-250938FC843D}.Release|x64.ActiveCfg = Release|x64
+		{DADC7109-6D73-4044-AA06-250938FC843D}.Release|x64.Build.0 = Release|x64
+		{DADC7109-6D73-4044-AA06-250938FC843D}.Release|x86.ActiveCfg = Release|Win32
+		{DADC7109-6D73-4044-AA06-250938FC843D}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CCC10A0B-9569-4934-B1E9-E00B596BACA4}
+	EndGlobalSection
+EndGlobal
