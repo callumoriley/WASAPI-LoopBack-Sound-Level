@@ -12,83 +12,115 @@
 	if((punk) != NULL) \
 		{(punk)->Release(); (punk) = NULL;}
 
-void EnumEndpoints() {
-	CoInitialize(nullptr);
-	//^this line caused so much pain (;-;)
+#define REFTIMES_PER_SEC  10000000
+#define REFTIMES_PER_MILLISEC  10000
 
-	HRESULT hr = S_OK;
-	const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
-	const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
-	IMMDeviceEnumerator* pEnum = NULL;
-	IMMDeviceCollection* pCollection = NULL;
-	IMMDevice* pDevice = NULL;
-	IPropertyStore* pProps = NULL;
-	LPWSTR pwszID = NULL;
+const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
+const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
+const IID IID_IAudioClient = __uuidof(IAudioCaptureClient);
+const IID IID_IAudioCaptureClient = __uuidof(IAudioCaptureClient);
 
-	//Instantiate an IMMDeviceEnumerator object
-	std::cout << "Creating Enumerator.";
-	hr = CoCreateInstance(CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, IID_IMMDeviceEnumerator, (void**)&pEnum);
-	EXIT_ON_ERROR(hr);
+void captureStream() {
+    CoInitialize(nullptr);
+	HRESULT hr;
+	REFERENCE_TIME hnsRequestedDuration = REFTIMES_PER_SEC;
+	REFERENCE_TIME hnsActualDuration;
 
-		//use enumerator to put the collection of devices into the IMMDeviceCollection store
-		std::cout << "\nEnumerating Endpoints.";
-	hr = pEnum->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &pCollection);
-	EXIT_ON_ERROR(hr);
+    UINT32 bufferFrameCount;
+    UINT32 numFramesAvailable;
+    
+    IMMDeviceEnumerator* pEnumerator = NULL;
+    IMMDevice* pDevice = NULL;
+    IAudioClient* pAudioClient = NULL;
+    IAudioCaptureClient* pCaptureClient = NULL;
+    
+    WAVEFORMATEX* pwfx = NULL;
+    
+    UINT32 packetLength = 0;
+    
+    BOOL bDone = FALSE;
+    
+    BYTE* pData;
+    
+    DWORD flags;
 
-		UINT count;
-	//get count of devices
-	std::cout << "\nGetting count of devices.";
-	hr = pCollection->GetCount(&count);
-	EXIT_ON_ERROR(hr);
+    hr = CoCreateInstance(CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, IID_IMMDeviceEnumerator, (void**)&pEnumerator);
+    EXIT_ON_ERROR(hr);
 
-	//print number of devices found
-	std::cout << "\nNumber of devices: " << count;
+    hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eConsole, &pDevice);
+    if (pDevice == nullptr) {
+        printf("\nDevice not found.");
+    }
+    EXIT_ON_ERROR(hr);
 
-	//print the names of devices
-	for (ULONG i = 0; i < count; i++) {
+    hr = pDevice->Activate(IID_IAudioClient, CLSCTX_ALL, NULL, (void**)&pAudioClient);
+    EXIT_ON_ERROR(hr);
 
-		//get an item from the collection
-		hr = pCollection->Item(i, &pDevice);
-		EXIT_ON_ERROR(hr);
+    hr = pAudioClient->GetMixFormat(&pwfx);
+    EXIT_ON_ERROR(hr);
 
-		//get device id string
-		hr = pDevice->GetId(&pwszID);
-		EXIT_ON_ERROR(hr);
+    hr = pAudioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, 0, hnsRequestedDuration, 0, pwfx, NULL);
+    EXIT_ON_ERROR(hr);
 
-		//get the property store for the device
-		hr = pDevice->OpenPropertyStore(STGM_READ, &pProps);
-		EXIT_ON_ERROR(hr);
+    // Get the size of the allocated buffer.
+    hr = pAudioClient->GetBufferSize(&bufferFrameCount);
+    EXIT_ON_ERROR(hr);
 
-		PROPVARIANT varName;
-		PropVariantInit(&varName);
+    hr = pAudioClient->GetService(IID_IAudioCaptureClient, (void**)&pCaptureClient);
+    EXIT_ON_ERROR(hr);
+    
+    // Notify the audio sink which format to use.
 
-		//get the user-friendly name of the device
-		hr = pProps->GetValue(PKEY_Device_FriendlyName, &varName);
-		EXIT_ON_ERROR(hr);
+    // Calculate the actual duration of the allocated buffer.
+    hnsActualDuration = (double)REFTIMES_PER_SEC *
+    bufferFrameCount / pwfx->nSamplesPerSec;
 
-		//print the current device to the console
-		printf("\nEndpoint device %d: %S", i, varName.pwszVal);
-		
-		//release interfaces for next iteration
-		CoTaskMemFree(pwszID);
-		pwszID = NULL;
-		PropVariantClear(&varName);
-		SAFE_RELEASE(pProps);
-		SAFE_RELEASE(pDevice);
-	}
-	SAFE_RELEASE(pEnum);
-	SAFE_RELEASE(pCollection);
+    hr = pAudioClient->Start();  // Start recording.
+    EXIT_ON_ERROR(hr);
 
-Exit:
-	CoTaskMemFree(pwszID);
-	SAFE_RELEASE(pEnum);
-	SAFE_RELEASE(pCollection);
-	SAFE_RELEASE(pProps);
-	SAFE_RELEASE(pDevice);
-	CoUninitialize();
+    // Each loop fills about half of the shared buffer.
+    while (bDone == FALSE){
+        // Sleep for half the buffer duration.
+        Sleep(hnsActualDuration / REFTIMES_PER_MILLISEC / 2);
+
+        hr = pCaptureClient->GetNextPacketSize(&packetLength);
+        EXIT_ON_ERROR(hr);
+
+        while (packetLength != 0){
+            // Get the available data in the shared buffer.
+            hr = pCaptureClient->GetBuffer(&pData, &numFramesAvailable, &flags, NULL, NULL);
+            EXIT_ON_ERROR(hr);
+
+            if (flags & AUDCLNT_BUFFERFLAGS_SILENT){
+                printf("\nNo Audio");
+            }
+            else {
+                printf("\nAudio Detected.");
+            }
+
+            hr = pCaptureClient->ReleaseBuffer(numFramesAvailable);
+            EXIT_ON_ERROR(hr);
+
+            hr = pCaptureClient->GetNextPacketSize(&packetLength);
+            EXIT_ON_ERROR(hr);
+        }
+    }
+
+    hr = pAudioClient->Stop();  // Stop recording.
+    EXIT_ON_ERROR(hr);
+
+    CoUninitialize();
+
+    Exit:
+        CoTaskMemFree(pwfx);
+        SAFE_RELEASE(pEnumerator);
+        SAFE_RELEASE(pDevice);
+        SAFE_RELEASE(pAudioClient);
+        SAFE_RELEASE(pCaptureClient);
+        CoUninitialize();
 }
 
 int main() {
-	EnumEndpoints();
+	captureStream();
 	return 0;
 }
