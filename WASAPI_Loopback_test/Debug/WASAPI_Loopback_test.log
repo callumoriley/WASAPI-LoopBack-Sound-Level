@@ -1,4 +1,0 @@
-﻿  Application.cpp
-D:\GitHub\WASAPI-LoopBack\WASAPI_Loopback_test\Application.cpp(76,22): warning C4244: '=': conversion from 'double' to 'REFERENCE_TIME', possible loss of data
-D:\GitHub\WASAPI-LoopBack\WASAPI_Loopback_test\Application.cpp(84,57): warning C4244: 'argument': conversion from 'REFERENCE_TIME' to 'DWORD', possible loss of data
-  WASAPI_Loopback_test.vcxproj -> D:\GitHub\WASAPI-LoopBack\WASAPI_Loopback_test\Debug\WASAPI_Loopback_test.exe
